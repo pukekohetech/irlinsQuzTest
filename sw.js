@@ -2,7 +2,7 @@
 // sw.js – Offline-first PWA (SAFE + CLEAN)
 // v3: cache ONLY local core assets, never intercept fonts/CDNs, no cache poisoning.
 
-const CACHE_NAME = "phs-safety-l1-v7";
+const CACHE_NAME = "phs-safety-l1-v8";
 
 const CORE_ASSETS = [
   "./",

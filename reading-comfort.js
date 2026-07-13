@@ -24,6 +24,7 @@
   let settings = { ...DEFAULTS };
   let dragActive = false;
   let previousFocus = null;
+  let outputSnapshot = null;
 
   const el = {};
 
@@ -194,10 +195,79 @@
     el.readingComfortClose.focus();
   }
 
-  function closePanel() {
+  function closePanel({ restoreFocus = true } = {}) {
     el.readingComfortPanel.classList.add("hidden");
     el.readingComfortToggle.setAttribute("aria-expanded", "false");
-    if (previousFocus && typeof previousFocus.focus === "function") previousFocus.focus();
+    if (restoreFocus && previousFocus && typeof previousFocus.focus === "function") previousFocus.focus();
+  }
+
+  function suspendForOutput() {
+    if (outputSnapshot) return;
+
+    const root = document.documentElement;
+    const body = document.body;
+    const variableNames = [
+      "--reading-font-family",
+      "--reading-letter-spacing",
+      "--reading-line-height",
+      "--reading-brightness",
+      "--reading-contrast"
+    ];
+    const hiddenElements = [
+      el.readingTint,
+      el.readingRuler,
+      el.readingComfortPanel,
+      el.readingComfortToggle,
+      el.readingComfortRemove
+    ];
+
+    outputSnapshot = {
+      fontSize: root.style.fontSize,
+      variables: Object.fromEntries(variableNames.map((name) => [name, root.style.getPropertyValue(name)])),
+      darkMode: body.classList.contains("reading-dark-mode"),
+      reducedGlare: body.classList.contains("reading-reduced-glare"),
+      displays: hiddenElements.map((element) => element ? element.style.display : "")
+    };
+
+    root.style.fontSize = "16px";
+    root.style.setProperty("--reading-font-family", DEFAULTS.font);
+    root.style.setProperty("--reading-letter-spacing", "0px");
+    root.style.setProperty("--reading-line-height", DEFAULTS.lineSpacing.toFixed(2));
+    root.style.setProperty("--reading-brightness", "1");
+    root.style.setProperty("--reading-contrast", "1");
+
+    body.classList.remove("reading-dark-mode", "reading-reduced-glare");
+    hiddenElements.forEach((element) => {
+      if (element) element.style.display = "none";
+    });
+  }
+
+  function resumeAfterOutput() {
+    if (!outputSnapshot) return;
+
+    const root = document.documentElement;
+    const body = document.body;
+    const hiddenElements = [
+      el.readingTint,
+      el.readingRuler,
+      el.readingComfortPanel,
+      el.readingComfortToggle,
+      el.readingComfortRemove
+    ];
+
+    root.style.fontSize = outputSnapshot.fontSize;
+    Object.entries(outputSnapshot.variables).forEach(([name, value]) => {
+      if (value) root.style.setProperty(name, value);
+      else root.style.removeProperty(name);
+    });
+
+    body.classList.toggle("reading-dark-mode", outputSnapshot.darkMode);
+    body.classList.toggle("reading-reduced-glare", outputSnapshot.reducedGlare);
+    hiddenElements.forEach((element, index) => {
+      if (element) element.style.display = outputSnapshot.displays[index];
+    });
+
+    outputSnapshot = null;
   }
 
   function removeAllReadingChanges() {
@@ -225,6 +295,13 @@
       else closePanel();
     });
     el.readingComfortClose.addEventListener("click", closePanel);
+
+    document.addEventListener("pointerdown", (event) => {
+      if (el.readingComfortPanel.classList.contains("hidden")) return;
+      if (el.readingComfortPanel.contains(event.target)) return;
+      if (el.readingComfortToggle.contains(event.target)) return;
+      closePanel({ restoreFocus: false });
+    });
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !el.readingComfortPanel.classList.contains("hidden")) closePanel();
@@ -290,6 +367,7 @@
     el.readingSaveSettings.addEventListener("click", () => {
       const saved = writeJson(STORAGE_KEY, settings);
       announce(saved ? "Your current settings were saved on this device." : "The browser could not save these settings.");
+      closePanel();
     });
 
     el.readingResetSettings.addEventListener("click", removeAllReadingChanges);
@@ -333,6 +411,11 @@
     settings = sanitise(readJson(STORAGE_KEY, DEFAULTS));
     bindEvents();
     applySettings();
+
+    window.ReadingComfort = {
+      suspendForOutput,
+      resumeAfterOutput
+    };
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

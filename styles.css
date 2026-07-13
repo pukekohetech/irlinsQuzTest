@@ -587,8 +587,9 @@ textarea {
 
 .reading-comfort-toggle {
   position: fixed;
+  top: 18px;
   right: 18px;
-  bottom: 18px;
+  bottom: auto;
   z-index: 1202;
   display: inline-flex;
   align-items: center;
@@ -623,8 +624,10 @@ textarea {
 
 .reading-comfort-remove {
   position: fixed;
-  left: 14px;
-  bottom: 14px;
+  top: 78px;
+  right: 18px;
+  bottom: auto;
+  left: auto;
   z-index: 1203;
   border: 2px solid #ffffff;
   border-radius: 999px;
@@ -1138,9 +1141,19 @@ body.reading-reduced-glare img:not(.crest) {
 
 @media (max-width: 640px) {
   .reading-comfort-toggle {
+    top: 10px;
     right: 10px;
-    bottom: 10px;
+    bottom: auto;
     padding: 9px 12px;
+  }
+
+  .reading-comfort-remove {
+    top: 62px;
+    right: 10px;
+    bottom: auto;
+    left: auto;
+    padding: 8px 11px;
+    font-size: 12px;
   }
 
   .reading-comfort-toggle > span:last-child {
@@ -1169,5 +1182,115 @@ body.reading-reduced-glare img:not(.crest) {
     margin-left: -16px;
     padding-right: 16px;
     padding-left: 16px;
+  }
+}
+
+
+/* Reading-comfort changes are screen-only and must never alter printed output. */
+@media print {
+  html {
+    font-size: 16px !important;
+  }
+
+  body,
+  body.reading-dark-mode {
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: var(--text-main) !important;
+  }
+
+  .reading-comfort-toggle,
+  .reading-comfort-remove,
+  .reading-comfort-panel,
+  .reading-tint,
+  .reading-ruler {
+    display: none !important;
+  }
+
+  body.reading-comfort-enabled .container,
+  body.reading-comfort-enabled .container input,
+  body.reading-comfort-enabled .container select,
+  body.reading-comfort-enabled .container textarea,
+  body.reading-comfort-enabled .container button {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif !important;
+    letter-spacing: normal !important;
+    line-height: 1.6 !important;
+    filter: none !important;
+  }
+
+  body.reading-dark-mode .container {
+    background: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  body.reading-dark-mode .info,
+  body.reading-dark-mode .assessment {
+    background: linear-gradient(to bottom, #ffffff 0%, var(--bg-soft) 100%) !important;
+  }
+
+  body.reading-dark-mode .result-section {
+    background: #ffffff !important;
+  }
+
+  body.reading-dark-mode .container .question,
+  body.reading-dark-mode .container .feedback {
+    color: var(--text-main) !important;
+    border-color: var(--border-subtle) !important;
+    background: #ffffff !important;
+  }
+
+  body.reading-dark-mode .container .question.correct {
+    border-color: #23a46a !important;
+    background: linear-gradient(135deg, #ecfbf3 0%, #ffffff 70%) !important;
+  }
+
+  body.reading-dark-mode .container .question.partial {
+    border-color: #f1c40f !important;
+    background: linear-gradient(135deg, #fef9e7 0%, #ffffff 70%) !important;
+  }
+
+  body.reading-dark-mode .container .question.wrong {
+    border-color: #e74c3c !important;
+    background: linear-gradient(135deg, #fdedec 0%, #ffffff 70%) !important;
+  }
+
+  body.reading-dark-mode .container .feedback.correct {
+    border-color: #23a46a !important;
+    background: #edfdf4 !important;
+  }
+
+  body.reading-dark-mode .container .feedback.partial {
+    border-color: #f1c40f !important;
+    background: #fffbe8 !important;
+  }
+
+  body.reading-dark-mode .container .feedback.wrong {
+    border-color: #e74c3c !important;
+    background: #fff0ef !important;
+  }
+
+  body.reading-dark-mode .container .info h2,
+  body.reading-dark-mode .container .assessment h2,
+  body.reading-dark-mode .container .result-section h2 {
+    color: var(--phs-maroon) !important;
+  }
+
+  body.reading-dark-mode .container label,
+  body.reading-dark-mode .container .question p,
+  body.reading-dark-mode .container .feedback p,
+  body.reading-dark-mode .container .feedback h3 {
+    color: var(--text-main) !important;
+  }
+
+  body.reading-dark-mode .container input,
+  body.reading-dark-mode .container select,
+  body.reading-dark-mode .container textarea {
+    background: rgba(248, 250, 252, 0.9) !important;
+    color: var(--text-main) !important;
+    border-color: var(--border-subtle) !important;
+  }
+
+  body.reading-reduced-glare img:not(.crest) {
+    filter: none !important;
   }
 }
