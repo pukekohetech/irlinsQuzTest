@@ -1,0 +1,22 @@
+READING COMFORT UPDATE
+
+Open the app normally, then select the “Aa Reading comfort” button in the lower-right corner.
+
+Included features:
+- Cream, pale yellow, peach, pink, green, aqua, blue, grey and lavender colour presets
+- Custom colour picker and filter-strength control
+- Font, text size, letter spacing and line spacing controls
+- Brightness, contrast, dark mode and reduced-glare controls
+- Draggable reading ruler highlighting 1 to 5 lines
+- One-tap removal of all reading changes
+- Four anonymous numbered profiles stored locally in the browser
+- Current settings restored automatically on the same browser/device
+
+No student name is attached to a reading profile, and settings are not transmitted anywhere.
+
+The added feature is contained mainly in:
+- reading-comfort.js
+- the Reading Comfort section at the end of styles.css
+- the Reading Comfort interface near the end of index.html
+
+The service-worker cache version was increased so deployed devices retrieve the updated files.
