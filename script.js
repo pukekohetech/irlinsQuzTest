@@ -337,6 +337,220 @@ function getStudentEmail(studentId) {
   return `${id}@pukekohehigh.school.nz`;
 }
 
+function buildHazardRecordsFromResults(results = []) {
+  const answerFor = (id) => {
+    const wanted = String(id || "").toLowerCase();
+    const match = (results || []).find((result) => String(result?.id || "").toLowerCase() === wanted);
+    return (match?.answer || "").trim();
+  };
+
+  const projectName = answerFor("project_name");
+  return Array.from({ length: 6 }, (_, index) => {
+    const number = index + 1;
+    return {
+      projectName,
+      hazard: answerFor(`hazard_identified_${number}`),
+      control: answerFor(`method_of_control_${number}`),
+      ppe: answerFor(`ppe_required_${number}`),
+      comments: answerFor(`comments_${number}`),
+    };
+  });
+}
+
+function normalisePdfText(value) {
+  // pdf-lib's built-in Helvetica font is WinAnsi. Normalising here prevents
+  // a single unsupported character from breaking the whole PDF export.
+  return String(value ?? "")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u2026/g, "...")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, "?")
+    .trim();
+}
+
+function wrapPdfText(text, font, size, maxWidth) {
+  const value = normalisePdfText(text);
+  if (!value) return [];
+
+  const lines = [];
+  const paragraphs = value.split(/\r?\n/);
+
+  const splitLongWord = (word) => {
+    const pieces = [];
+    let piece = "";
+    for (const char of word) {
+      const test = piece + char;
+      if (piece && font.widthOfTextAtSize(test, size) > maxWidth) {
+        pieces.push(piece);
+        piece = char;
+      } else {
+        piece = test;
+      }
+    }
+    if (piece) pieces.push(piece);
+    return pieces;
+  };
+
+  paragraphs.forEach((paragraph, paragraphIndex) => {
+    const words = paragraph.trim().split(/\s+/).filter(Boolean);
+    let line = "";
+
+    words.forEach((word) => {
+      const chunks = font.widthOfTextAtSize(word, size) <= maxWidth ? [word] : splitLongWord(word);
+      chunks.forEach((chunk) => {
+        const test = line ? `${line} ${chunk}` : chunk;
+        if (!line || font.widthOfTextAtSize(test, size) <= maxWidth) {
+          line = test;
+        } else {
+          lines.push(line);
+          line = chunk;
+        }
+      });
+    });
+
+    if (line) lines.push(line);
+    if (paragraphIndex < paragraphs.length - 1) lines.push("");
+  });
+
+  return lines;
+}
+
+function drawTextInPdfBox(page, text, box, font, options = {}) {
+  const padding = options.padding ?? 4;
+  const maxSize = options.maxSize ?? 8;
+  const minSize = options.minSize ?? 6;
+  const lineFactor = options.lineFactor ?? 1.18;
+  const width = Math.max(1, box.width - padding * 2);
+  const height = Math.max(1, box.height - padding * 2);
+  let size = maxSize;
+  let lines = [];
+  let lineHeight = size * lineFactor;
+
+  while (size >= minSize) {
+    lines = wrapPdfText(text, font, size, width);
+    lineHeight = size * lineFactor;
+    if (lines.length * lineHeight <= height) break;
+    size -= 0.25;
+  }
+
+  if (!lines.length) return;
+
+  const maxLines = Math.max(1, Math.floor(height / lineHeight));
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines);
+    let last = lines[maxLines - 1];
+    while (last && font.widthOfTextAtSize(`${last}...`, size) > width) {
+      last = last.slice(0, -1).trimEnd();
+    }
+    lines[maxLines - 1] = `${last || ""}...`;
+  }
+
+  let y = box.y + box.height - padding - size;
+  for (const line of lines) {
+    page.drawText(line, {
+      x: box.x + padding,
+      y,
+      size,
+      font,
+    });
+    y -= lineHeight;
+  }
+}
+
+function drawSingleLinePdfText(page, text, box, font, options = {}) {
+  const value = normalisePdfText(text);
+  if (!value) return;
+
+  const padding = options.padding ?? 2;
+  const maxSize = options.maxSize ?? 10;
+  const minSize = options.minSize ?? 7;
+  const width = Math.max(1, box.width - padding * 2);
+  let size = maxSize;
+
+  while (size > minSize && font.widthOfTextAtSize(value, size) > width) size -= 0.25;
+
+  page.drawText(value, {
+    x: box.x + padding,
+    y: box.y + Math.max(0, (box.height - size) / 2),
+    size,
+    font,
+  });
+}
+
+async function stampHazardRecordPdf(doc, finalData) {
+  const { StandardFonts } = window.PDFLib;
+  if (doc.getPageCount() < 2) return false;
+
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+  const page1 = pages[0];
+  const page2 = pages[1];
+
+  const studentEmail = getStudentEmail(finalData.studentId);
+  const studentCombined = `${finalData.studentName} ${studentEmail}`.trim();
+  drawSingleLinePdfText(page1, studentCombined, {
+    x: 135,
+    y: 434,
+    width: 580,
+    height: 21,
+  }, font, { maxSize: 9.5, minSize: 7 });
+
+  const columns = [
+    { key: "projectName", x: 68.16, width: 92.64 },
+    { key: "hazard", x: 161.28, width: 129.24 },
+    { key: "control", x: 291.00, width: 153.72 },
+    { key: "ppe", x: 445.08, width: 156.24 },
+    { key: "comments", x: 601.80, width: 121.44 },
+  ];
+
+  const rows = [
+    { page: page1, y: 317.76, height: 71.88 },
+    { page: page1, y: 245.16, height: 72.12 },
+    { page: page1, y: 179.64, height: 65.16 },
+    { page: page1, y: 113.52, height: 65.64 },
+    { page: page2, y: 400.44, height: 65.04 },
+    { page: page2, y: 333.96, height: 66.00 },
+  ];
+
+  const records = Array.isArray(finalData.hazardRecords) ? finalData.hazardRecords : [];
+  rows.forEach((row, index) => {
+    const record = records[index] || {};
+    columns.forEach((column) => {
+      drawTextInPdfBox(row.page, record[column.key] || "", {
+        x: column.x,
+        y: row.y,
+        width: column.width,
+        height: row.height,
+      }, font, {
+        maxSize: column.key === "projectName" ? 7.5 : 8,
+        minSize: 5.75,
+        padding: 4,
+      });
+    });
+  });
+
+  // Keep the assessor-only criteria as a genuine teacher sign-off. We fill
+  // the assessor name and date, but do not auto-tick or auto-sign criteria.
+  drawSingleLinePdfText(page2, finalData.teacherName, {
+    x: 126,
+    y: 143,
+    width: 360,
+    height: 16,
+  }, font, { maxSize: 9, minSize: 7 });
+
+  drawSingleLinePdfText(page2, new Date().toLocaleDateString("en-NZ"), {
+    x: 544,
+    y: 113,
+    width: 65,
+    height: 16,
+  }, font, { maxSize: 8.5, minSize: 7 });
+
+  return true;
+}
+
 async function fillPdfForm(pdfBytes, finalData) {
   if (!window.PDFLib) {
     await loadFirstAvailableScript(PDF_LIBRARY_URLS.pdfLib);
@@ -344,45 +558,50 @@ async function fillPdfForm(pdfBytes, finalData) {
   if (!window.PDFLib) throw new Error("pdf-lib failed to load");
 
   const { PDFDocument } = window.PDFLib;
-
   const doc = await PDFDocument.load(pdfBytes);
-  const form = doc.getForm();
 
-  const safeSetMany = (nameLike, value) => {
-    try {
-      form.getFields().forEach((f) => {
-        try {
-          const n = f.getName();
-          if (n.toLowerCase().includes(nameLike.toLowerCase())) {
-            if (typeof f.setText === "function") {
-              f.setText(value || "");
+  let form = null;
+  let fields = [];
+  try {
+    form = doc.getForm();
+    fields = form.getFields();
+  } catch (error) {
+    if (DEBUG) console.warn("PDF has no usable AcroForm fields:", error);
+  }
+
+  // Backward compatibility with the original one-page fillable sign-off PDF.
+  if (form && fields.length) {
+    const safeSetMany = (nameLike, value) => {
+      try {
+        fields.forEach((field) => {
+          try {
+            const name = field.getName();
+            if (name.toLowerCase().includes(nameLike.toLowerCase()) && typeof field.setText === "function") {
+              field.setText(value || "");
             }
-          }
-        } catch {}
-      });
-    } catch (e) {
-      console.warn(`safeSetMany failed for: ${nameLike}`, e);
-    }
-  };
+          } catch {}
+        });
+      } catch (error) {
+        console.warn(`safeSetMany failed for: ${nameLike}`, error);
+      }
+    };
 
-  // (kept for compatibility / logs)
-  const safeSet = (fieldName, value) => {
-    try {
-      form.getTextField(fieldName).setText(value || "");
-    } catch (e) {
-      console.warn(`Field not found: ${fieldName}`);
-    }
-  };
+    const studentEmail = getStudentEmail(finalData.studentId);
+    const studentCombined = `${finalData.studentName} ${studentEmail}`.trim();
+    safeSetMany("StudentName", studentCombined);
+    safeSetMany("AssessorName", finalData.teacherName);
+    safeSetMany("Date", new Date().toLocaleDateString("en-NZ"));
+    safeSetMany("Result", finalData.pct >= 100 ? "A" : "N");
 
-  const studentEmail = getStudentEmail(finalData.studentId);
-  const studentCombined = `${finalData.studentName} ${studentEmail}`.trim();
+    form.flatten();
+  }
 
-  safeSetMany("StudentName", studentCombined);
-  safeSetMany("AssessorName", finalData.teacherName);
-  safeSetMany("Date", new Date().toLocaleDateString("en-NZ"));
-  safeSetMany("Result", finalData.pct >= 100 ? "A" : "N");
+  // The two-page "Assessment plus hazards" template is intentionally a
+  // normal non-fillable PDF. Stamp all six hazard records directly into it.
+  if (Array.isArray(finalData.hazardRecords) && finalData.hazardRecords.length) {
+    await stampHazardRecordPdf(doc, finalData);
+  }
 
-  form.flatten();
   return await doc.save();
 }
 
@@ -1443,6 +1662,7 @@ function submitWork() {
     totalPoints,
     pct,
     deadlineInfo: deadlineNow,
+    hazardRecords: buildHazardRecordsFromResults(results),
   };
 
   const canExport = pct >= MIN_PCT_FOR_SUBMIT && (!deadlineNow || deadlineNow.status !== "overdue");
