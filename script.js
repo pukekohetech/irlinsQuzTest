@@ -497,40 +497,40 @@ async function stampWorkshopProcessPdf(doc, finalData) {
     y: 479.6,
     width: 657,
     height: 22,
-  }, font, { maxSize: 9.5, minSize: 7 });
+  }, font, { maxSize: 14, minSize: 7 });
 
   drawSingleLinePdfText(page1, record.projectName || "", {
     x: 108,
     y: 456.6,
     width: 640,
     height: 22.5,
-  }, font, { maxSize: 9.5, minSize: 7 });
+  }, font, { maxSize: 14, minSize: 7 });
 
   // Page 1 workshop-process response areas.
   drawTextInPdfBox(page1, record.materials || "", {
     x: 34.8, y: 304.3, width: 718.1, height: 82.1,
-  }, font, { maxSize: 8.2, minSize: 5.5, padding: 5, lineFactor: 1.16 });
+  }, font, { maxSize: 14, minSize: 5.5, padding: 5, lineFactor: 1.16 });
 
   drawTextInPdfBox(page1, record.markOut || "", {
     x: 34.8, y: 188.4, width: 718.1, height: 98.5,
-  }, font, { maxSize: 8.2, minSize: 5.5, padding: 5, lineFactor: 1.16 });
+  }, font, { maxSize: 14, minSize: 5.5, padding: 5, lineFactor: 1.16 });
 
   drawTextInPdfBox(page1, record.cutShape || "", {
     x: 34.8, y: 88.8, width: 718.1, height: 82.3,
-  }, font, { maxSize: 8.0, minSize: 5.25, padding: 5, lineFactor: 1.14 });
+  }, font, { maxSize: 14, minSize: 5.25, padding: 5, lineFactor: 1.14 });
 
   // Page 2 workshop-process response areas.
   drawTextInPdfBox(page2, record.joints || "", {
     x: 34.8, y: 462.1, width: 718.1, height: 66.6,
-  }, font, { maxSize: 7.8, minSize: 5.0, padding: 5, lineFactor: 1.14 });
+  }, font, {maxSize: 14, minSize: 5.0, padding: 5, lineFactor: 1.14 });
 
   drawTextInPdfBox(page2, record.assemble || "", {
     x: 34.8, y: 378.1, width: 718.1, height: 66.6,
-  }, font, { maxSize: 7.8, minSize: 5.0, padding: 5, lineFactor: 1.14 });
+  }, font, {maxSize: 14, minSize: 5.0, padding: 5, lineFactor: 1.14 });
 
   drawTextInPdfBox(page2, record.finishes || "", {
     x: 34.8, y: 294.0, width: 718.1, height: 66.7,
-  }, font, { maxSize: 7.8, minSize: 5.0, padding: 5, lineFactor: 1.14 });
+  }, font, {maxSize: 14, minSize: 5.0, padding: 5, lineFactor: 1.14 });
 
   // Page 3 is genuinely for assessor use. Pre-fill only assessor name and date;
   // leave criteria boxes, comments, result and signature for the teacher.
@@ -546,7 +546,7 @@ async function stampWorkshopProcessPdf(doc, finalData) {
     y: 303.0,
     width: 80,
     height: 16,
-  }, font, { maxSize: 8.2, minSize: 7 });
+  }, font, { maxSize: 14, minSize: 7 });
 
   return true;
 }
